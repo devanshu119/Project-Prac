@@ -1,0 +1,37 @@
+﻿python : Traceback 
+(most recent call 
+last):
+At line:1 char:1
++ python app1.py 2>&1 
+| Out-File -Encoding 
+utf8 out.txt
++ ~~~~~~~~~~~~~~~~~~~
+    + CategoryInfo     
+         : NotSpecifi  
+  ed: (Traceback (mo   
+ st recent call las    
+t)::String) [], Re    
+moteException
+    + FullyQualifiedEr 
+   rorId : NativeComm  
+  andError
+ 
+  File 
+"C:\Users\Devanshu Verm
+a\OneDrive\Desktop\Proj
+ect(main) - 
+Copy\webapp\app1.py", 
+line 13, in <module>
+    from 
+scripts.predict import 
+predict_img, get_args 
+as get_predict_args, 
+mask_to_image
+ImportError: cannot 
+import name 
+'predict_img' from 
+'scripts.predict' 
+(C:\Users\Devanshu Verm
+a\OneDrive\Desktop\Proj
+ect(main) - Copy\script
+s\predict.py)

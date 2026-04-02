@@ -1,0 +1,547 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>SAR Oil Spill Detection</title>
+    
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600&display=swap" rel="stylesheet">
+    
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"
+     integrity="sha256-p4NxAoJBhIIN+hmNHrzRCf9tD/miZyoHS5obTRR9BMY="
+     crossorigin=""/>
+    
+    <style>
+        :root {
+            --sidebar-bg: #202123;
+            --main-bg: #343541;
+            --text-primary: #ececec;
+            --text-secondary: #c5c5d2;
+            --accent: #10a37f;
+            --accent-hover: #1a7f64;
+            --border: #4d4d4f;
+            --panel-bg: rgba(68, 70, 84, 0.9);
+            --input-bg: #40414f;
+        }
+
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+            font-family: 'Inter', sans-serif;
+        }
+
+        body {
+            background-color: var(--main-bg);
+            color: var(--text-primary);
+            display: flex;
+            height: 100vh;
+            overflow: hidden;
+        }
+
+        /* Sidebar */
+        .sidebar {
+            width: 260px;
+            background-color: var(--sidebar-bg);
+            display: flex;
+            flex-direction: column;
+            padding: 0.5rem;
+            border-right: 1px solid rgba(255,255,255,0.1);
+            z-index: 100;
+            transition: transform 0.3s ease;
+        }
+
+        .new-chat-btn {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            padding: 12px;
+            border: 1px solid rgba(255,255,255,0.2);
+            border-radius: 6px;
+            color: var(--text-primary);
+            background: transparent;
+            cursor: pointer;
+            transition: background 0.2s;
+            margin-bottom: 20px;
+            font-size: 0.9rem;
+        }
+
+        .new-chat-btn:hover {
+            background-color: rgba(255,255,255,0.05);
+        }
+
+        .nav-section {
+            margin-bottom: 20px;
+        }
+
+        .nav-title {
+            font-size: 0.75rem;
+            color: var(--text-secondary);
+            padding: 0 12px;
+            margin-bottom: 8px;
+            font-weight: 500;
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+        }
+
+        /* Toggle Switch */
+        .toggle-item {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding: 12px;
+            border-radius: 6px;
+            cursor: pointer;
+            transition: background 0.2s;
+            color: var(--text-primary);
+            font-size: 0.9rem;
+        }
+
+        .toggle-item:hover {
+            background-color: rgba(255,255,255,0.05);
+        }
+
+        .switch {
+            position: relative;
+            display: inline-block;
+            width: 40px;
+            height: 22px;
+        }
+
+        .switch input { 
+            opacity: 0;
+            width: 0;
+            height: 0;
+        }
+
+        .slider {
+            position: absolute;
+            cursor: pointer;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background-color: #565869;
+            transition: .3s;
+            border-radius: 34px;
+        }
+
+        .slider:before {
+            position: absolute;
+            content: "";
+            height: 16px;
+            width: 16px;
+            left: 3px;
+            bottom: 3px;
+            background-color: white;
+            transition: .3s;
+            border-radius: 50%;
+        }
+
+        input:checked + .slider {
+            background-color: var(--accent);
+        }
+
+        input:checked + .slider:before {
+            transform: translateX(18px);
+        }
+
+        /* Main Content */
+        .main-content {
+            flex-grow: 1;
+            display: flex;
+            flex-direction: column;
+            position: relative;
+        }
+
+        .top-bar {
+            height: 60px;
+            display: flex;
+            align-items: center;
+            padding: 0 20px;
+            justify-content: center;
+            border-bottom: 1px solid rgba(255,255,255,0.1);
+            background: var(--main-bg);
+            z-index: 10;
+        }
+
+        .top-bar h1 {
+            font-size: 1rem;
+            font-weight: 500;
+        }
+
+        /* Map Area */
+        .map-section {
+            flex-grow: 1;
+            position: relative;
+            display: flex;
+            flex-direction: column;
+        }
+
+        #map {
+            width: 100%;
+            height: 100%;
+            z-index: 1;
+            background-color: #1a1b1e;
+        }
+
+        /* Input Area (like chat prompt) */
+        .input-wrapper {
+            position: absolute;
+            bottom: 40px;
+            left: 50%;
+            transform: translateX(-50%);
+            width: 100%;
+            max-width: 768px;
+            padding: 0 20px;
+            z-index: 1000;
+        }
+
+        .upload-box {
+            background-color: var(--input-bg);
+            border: 1px solid rgba(255,255,255,0.15);
+            border-radius: 12px;
+            padding: 12px 16px;
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            box-shadow: 0 0 15px rgba(0,0,0,0.5);
+            transition: border-color 0.2s;
+        }
+
+        .upload-box:focus-within {
+            border-color: rgba(255,255,255,0.4);
+        }
+
+        .file-btn {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            background: rgba(255,255,255,0.05);
+            padding: 8px 16px;
+            border-radius: 6px;
+            cursor: pointer;
+            color: var(--text-primary);
+            font-size: 0.95rem;
+            flex-grow: 1;
+            transition: background 0.2s;
+        }
+
+        .file-btn:hover {
+            background: rgba(255,255,255,0.1);
+        }
+
+        #file-input { display: none; }
+
+        .filename {
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            max-width: 400px;
+            color: var(--text-secondary);
+        }
+
+        .submit-btn {
+            background-color: var(--accent);
+            color: white;
+            border: none;
+            border-radius: 6px;
+            width: 40px;
+            height: 40px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            cursor: pointer;
+            transition: background 0.2s, opacity 0.2s;
+        }
+
+        .submit-btn:hover:not(:disabled) {
+            background-color: var(--accent-hover);
+        }
+
+        .submit-btn:disabled {
+            background-color: #565869;
+            cursor: not-allowed;
+            opacity: 0.5;
+        }
+
+        /* Results Panel */
+        .results-panel {
+            position: absolute;
+            top: 20px;
+            right: 20px;
+            width: 320px;
+            background: var(--panel-bg);
+            backdrop-filter: blur(10px);
+            -webkit-backdrop-filter: blur(10px);
+            border: 1px solid rgba(255,255,255,0.1);
+            border-radius: 12px;
+            padding: 20px;
+            z-index: 1000;
+            display: none;
+            box-shadow: 0 8px 32px rgba(0,0,0,0.4);
+            animation: fadeIn 0.3s ease-out;
+        }
+
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(-10px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+
+        .results-panel h3 {
+            font-size: 1rem;
+            font-weight: 500;
+            margin-bottom: 16px;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .result-row {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 10px 0;
+            border-bottom: 1px solid rgba(255,255,255,0.05);
+            font-size: 0.9rem;
+        }
+        
+        .result-row:last-child {
+            border-bottom: none;
+        }
+
+        .result-label {
+            color: var(--text-secondary);
+        }
+
+        .result-val {
+            font-weight: 600;
+        }
+
+        /* Spinner */
+        .spinner {
+            width: 20px;
+            height: 20px;
+            border: 2px solid rgba(255,255,255,0.3);
+            border-radius: 50%;
+            border-top-color: #fff;
+            animation: spin 1s linear infinite;
+            display: none;
+        }
+
+        @keyframes spin { 100% { transform: rotate(360deg); } }
+
+        /* Leaflet overrides */
+        .leaflet-container {
+            background: #1a1b1e;
+        }
+        .leaflet-control-zoom {
+            border: none !important;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.5) !important;
+        }
+        .leaflet-control-zoom-in, .leaflet-control-zoom-out {
+            background-color: var(--panel-bg) !important;
+            color: var(--text-primary) !important;
+            border-color: rgba(255,255,255,0.1) !important;
+        }
+        .leaflet-control-zoom-in:hover, .leaflet-control-zoom-out:hover {
+            background-color: var(--input-bg) !important;
+        }
+    </style>
+</head>
+<body>
+
+    <aside class="sidebar">
+        <button class="new-chat-btn" onclick="location.reload()">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="5" x2="12" y2="19"></line><line x1="5" y1="12" x2="19" y2="12"></line></svg>
+            New Analysis
+        </button>
+
+        <div class="nav-section">
+            <div class="nav-title">Modules</div>
+            
+            <div class="toggle-item">
+                <span>Risk Assessment</span>
+                <label class="switch">
+                    <input type="checkbox" id="risk-toggle">
+                    <span class="slider"></span>
+                </label>
+            </div>
+            
+            <div class="toggle-item">
+                <span>Advanced Filtering</span>
+                <label class="switch">
+                    <input type="checkbox">
+                    <span class="slider"></span>
+                </label>
+            </div>
+        </div>
+
+        <div style="flex-grow: 1;"></div>
+        
+        <div style="padding: 12px; font-size: 0.8rem; color: var(--text-secondary); border-top: 1px solid rgba(255,255,255,0.1);">
+            <div style="display: flex; align-items: center; gap: 8px; margin-bottom: 4px;">
+                <div style="width: 8px; height: 8px; border-radius: 50%; background-color: var(--accent);"></div>
+                Model: UNet 3-Class
+            </div>
+            <div>Sentinel-1 Pipeline</div>
+        </div>
+    </aside>
+
+    <main class="main-content">
+        <header class="top-bar">
+            <h1>OSD WebUI</h1>
+        </header>
+
+        <div class="map-section">
+            <div id="map"></div>
+            
+            <div class="results-panel" id="results-panel">
+                <h3>
+                    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="var(--accent)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M22 11.08V12a10 10 10 0 1 1-5.93-9.14"></path><polyline points="22 4 12 14.01 9 11.01"></polyline></svg>
+                    Analysis Report
+                </h3>
+                <div class="result-row">
+                    <span class="result-label">Total Area</span>
+                    <span class="result-val"><span id="res-area">0</span> km²</span>
+                </div>
+                <div class="result-row">
+                    <span class="result-label">Detected Spills</span>
+                    <span class="result-val" id="res-count">0</span>
+                </div>
+                <div class="result-row" id="risk-row" style="display: none; transition: opacity 0.3s; opacity: 0;">
+                    <span class="result-label" style="color: #ffaa00;">Risk (Dist. to Coast)</span>
+                    <span class="result-val" style="color: #ffaa00;"><span id="res-dist">0</span> km</span>
+                </div>
+            </div>
+
+            <div class="input-wrapper">
+                <form id="upload-form" class="upload-box">
+                    <label for="file-input" class="file-btn">
+                        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21.2 15c.7-1.2 1-2.5.7-3.9-.6-2-2.4-3.5-4.4-3.5h-1.2c-.7-3-3.2-5.2-6.2-5.6-3-.3-5.9 1.3-7.3 4-1.2 2.5-1 6.5.5 8.8m8.7-1.6V21"/><path d="M16 16l-4-4-4 4"/></svg>
+                        <span class="filename" id="filename-display">Select SAR Sentinel-1 Image (.tif)</span>
+                    </label>
+                    <input type="file" id="file-input" name="file" accept=".tif,.tiff">
+                    
+                    <button type="submit" class="submit-btn" id="submit-btn" disabled>
+                        <svg id="submit-icon" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="22" y1="2" x2="11" y2="13"></line><polygon points="22 2 15 22 11 13 2 9 22 2"></polygon></svg>
+                        <div class="spinner" id="submit-spinner"></div>
+                    </button>
+                </form>
+            </div>
+        </div>
+    </main>
+
+    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"
+     integrity="sha256-20nQCchB9co0qIjJZRGuk2/Z9VM+kNiyxNV1lvTlZBo="
+     crossorigin=""></script>
+
+    <script>
+        // Init Map
+        const map = L.map('map', {zoomControl: false}).setView([28.0, -90.0], 5);
+        L.control.zoom({ position: 'topright' }).addTo(map);
+
+        L.tileLayer('https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png', {
+            attribution: '&copy; OpenStreetMap contributors &copy; CARTO',
+            maxZoom: 19
+        }).addTo(map);
+
+        let imageOverlay = null;
+
+        // Elements
+        const fileInput = document.getElementById('file-input');
+        const filenameDisplay = document.getElementById('filename-display');
+        const submitBtn = document.getElementById('submit-btn');
+        const submitIcon = document.getElementById('submit-icon');
+        const submitSpinner = document.getElementById('submit-spinner');
+        const uploadForm = document.getElementById('upload-form');
+        const resultsPanel = document.getElementById('results-panel');
+        
+        const riskToggle = document.getElementById('risk-toggle');
+        const riskRow = document.getElementById('risk-row');
+
+        // Toggle Risk Assessment Module
+        riskToggle.addEventListener('change', (e) => {
+            if(e.target.checked) {
+                riskRow.style.display = 'flex';
+                setTimeout(() => riskRow.style.opacity = '1', 10);
+            } else {
+                riskRow.style.opacity = '0';
+                setTimeout(() => riskRow.style.display = 'none', 300);
+            }
+        });
+
+        // File Selection
+        fileInput.addEventListener('change', (e) => {
+            if (e.target.files.length > 0) {
+                filenameDisplay.textContent = e.target.files[0].name;
+                filenameDisplay.style.color = 'var(--text-primary)';
+                submitBtn.disabled = false;
+            } else {
+                filenameDisplay.textContent = 'Select SAR Sentinel-1 Image (.tif)';
+                filenameDisplay.style.color = 'var(--text-secondary)';
+                submitBtn.disabled = true;
+            }
+        });
+
+        // Form Submit
+        uploadForm.addEventListener('submit', async (e) => {
+            e.preventDefault();
+            if (fileInput.files.length === 0) return;
+
+            const formData = new FormData();
+            formData.append('file', fileInput.files[0]);
+
+            // UI Loading
+            submitBtn.disabled = true;
+            submitIcon.style.display = 'none';
+            submitSpinner.style.display = 'block';
+            resultsPanel.style.display = 'none';
+
+            if (imageOverlay) map.removeLayer(imageOverlay);
+
+            try {
+                const res = await fetch('/predict', { method: 'POST', body: formData });
+                const data = await res.json();
+
+                submitSpinner.style.display = 'none';
+                submitIcon.style.display = 'block';
+                submitBtn.disabled = false;
+
+                if (res.ok) {
+                    document.getElementById('res-area').textContent = data.analysis.spill_area_km2;
+                    document.getElementById('res-count').textContent = data.analysis.num_spills;
+                    document.getElementById('res-dist').textContent = data.analysis.distance_to_coast_km;
+                    
+                    resultsPanel.style.display = 'block';
+
+                    const bounds = data.bounds;
+
+                    try {
+                        let parsedBounds = bounds;
+                        if(Array.isArray(bounds[0][0])) {
+                            const b = bounds[0][0]; // [west, south, east, north]
+                            parsedBounds = [[b[1], b[0]], [b[3], b[2]]];
+                        }
+                        
+                        imageOverlay = L.imageOverlay(data.mask_image_url, parsedBounds, { opacity: 0.8 }).addTo(map);
+                        map.fitBounds(parsedBounds);
+                    } catch(err) {
+                        console.error("Bounds parsing issue:", err, bounds);
+                    }
+                } else {
+                    alert('Error: ' + data.error);
+                }
+            } catch (err) {
+                submitSpinner.style.display = 'none';
+                submitIcon.style.display = 'block';
+                submitBtn.disabled = false;
+                alert('Analysis failed. Check console.');
+                console.error(err);
+            }
+        });
+    </script>
+</body>
+</html>
