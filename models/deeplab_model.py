@@ -18,7 +18,7 @@ def create_deeplabv3(num_classes: int = None, n_classes: int = None, n_channels:
     if num_classes is None:
         raise ValueError("You must provide `num_classes` or `n_classes`.")
 
-    model = seg_models.deeplabv3_resnet50(pretrained=False, progress=True)
+    model = seg_models.deeplabv3_resnet50(weights=None, progress=True)
 
     # adjust input channels
     if n_channels != 3:
